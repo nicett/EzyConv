@@ -2,8 +2,15 @@ from PIL import Image
 import os
 import logging
 
-class ImageConverter:
+from converter.base_converter import Converter
+
+
+class ImageConverter(Converter):
+    def convert_file(self, file_path, output_path):
+        pass
+
     def __init__(self, input_files, output_folder, target_format, progress_var, progress_label, progress_manager):
+        super().__init__(input_files, output_folder, target_format, progress_var, progress_label)
         self.input_files = input_files
         self.output_folder = output_folder
         self.target_format = target_format
@@ -18,6 +25,8 @@ class ImageConverter:
                 with Image.open(file_path) as im:
                     base_name = os.path.basename(file_path)
                     output_path = os.path.join(self.output_folder, os.path.splitext(base_name)[0] + f'.{self.target_format.lower()}')
+                    # 检查文件是否已存在，并生成唯一文件名
+                    output_path = self.get_unique_filename(output_path)
                     im.save(output_path, self.target_format)
 
                 # 更新进度条

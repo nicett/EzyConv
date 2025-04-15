@@ -33,3 +33,20 @@ class Converter(ABC):
         progress_percentage = (current_index + 1) / self.total_files * 100
         self.progress_var.set(progress_percentage)
         self.progress_label.config(text=f"{progress_percentage:.2f}%")
+
+    @staticmethod
+    def get_unique_filename(output_path):
+        """
+        生成一个唯一的文件名，避免覆盖已有文件。
+        :param output_path: 初步生成的文件路径
+        :return: 唯一的文件路径
+        """
+        base, extension = os.path.splitext(output_path)
+        counter = 1
+
+        # 如果文件已经存在，增加编号直到文件名唯一
+        while os.path.exists(output_path):
+            output_path = f"{base}_{counter}{extension}"
+            counter += 1
+
+        return output_path
