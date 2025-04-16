@@ -4,14 +4,14 @@ import logging
 from abc import ABC, abstractmethod
 
 class Converter(ABC):
-    def __init__(self, input_files, output_folder, target_format, progress_var, progress_label, compress=False):
-        self.input_files = input_files
+    def __init__(self, input_file, output_folder, target_format, progress_var, progress_label, compress=False):
+        self.input_files = input_file
         self.output_folder = output_folder
         self.target_format = target_format
         self.progress_var = progress_var
         self.progress_label = progress_label
         self.compress = compress
-        self.total_files = len(input_files)
+        self.total_files = len(input_file)
 
     @abstractmethod
     def convert_file(self, file_path, output_path):

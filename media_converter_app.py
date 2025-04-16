@@ -1,6 +1,9 @@
+import time
 import tkinter as tk
+import asyncio
 from tkinter import filedialog, messagebox, ttk
-import threading
+
+import config
 from converter.image_converter import ImageConverter
 from converter.video_converter import VideoConverter
 from utils.progress_manager import ProgressManager
@@ -8,6 +11,11 @@ from utils.progress_manager import ProgressManager
 
 class MediaConverterApp:
     def __init__(self, root):
+        """
+        初始化媒体格式转换工具的GUI应用程序。
+
+        :param root: tkinter的主窗口对象。
+        """
         self.root = root
         self.root.title("媒体格式转换工具")
         self.root.geometry("600x500")
@@ -22,6 +30,9 @@ class MediaConverterApp:
         self.create_widgets()
 
     def create_widgets(self):
+        """
+        创建并布局GUI中的所有组件。
+        """
         # 文件选择
         label_files = tk.Label(self.root, text="选择文件:")
         label_files.grid(row=0, column=0, padx=10, pady=10, sticky=tk.W)
@@ -57,7 +68,7 @@ class MediaConverterApp:
         label_format = tk.Label(self.root, text="选择目标格式:")
         label_format.grid(row=4, column=0, padx=10, pady=10, sticky=tk.W)
 
-        self.format_combobox = ttk.Combobox(self.root, values=["JPG", "PNG", "GIF", "WEBP", "MP4", "MOV", "AVI"])
+        self.format_combobox = ttk.Combobox(self.root, values=["JPG", "PNG", "GIF", "WEBP", "MP4", "MOV", "AVI", "MKV"])
         self.format_combobox.grid(row=4, column=1, padx=10, pady=10)
 
         # 开始转换按钮
@@ -74,6 +85,9 @@ class MediaConverterApp:
         self.progress_label.place(in_=progress_bar, relx=0.5, rely=0.5, anchor=tk.CENTER)
 
     def select_files(self):
+        """
+        打开文件选择对话框，供用户选择要转换的文件。
+        """
         file_paths = filedialog.askopenfilenames(filetypes=[("图片文件", "*.jpg;*.png;*.webp;*.gif"),
                                                             ("视频文件", "*.mp4;*.avi;*.mov;*.mkv")])
         if file_paths:
@@ -82,17 +96,26 @@ class MediaConverterApp:
                 self.listbox_files.insert(tk.END, file_path)
 
     def remove_selected_file(self):
+        """
+        移除列表框中用户选中的文件。
+        """
         selected_indices = self.listbox_files.curselection()
         for index in reversed(selected_indices):
             self.listbox_files.delete(index)
 
     def select_output_folder(self):
+        """
+        打开文件夹选择对话框，供用户选择输出文件夹。
+        """
         folder_path = filedialog.askdirectory()
         if folder_path:
             self.entry_output.delete(0, tk.END)
             self.entry_output.insert(0, folder_path)
 
     def start_conversion(self):
+        """
+        开始文件转换过程。
+        """
         self.input_files = self.listbox_files.get(0, tk.END)
         self.output_folder = self.entry_output.get()
         self.target_format = self.format_combobox.get()
@@ -112,10 +135,19 @@ class MediaConverterApp:
         # 禁用按钮
         self.disable_buttons()
 
-        # 启动转换线程
-        threading.Thread(target=self.convert_files).start()
+        # for i, file_path in enumerate(self.input_files):
+        #         video_converter = VideoConverter(file_path, self.output_folder, self.target_format,self.progress_var, self.progress_label, self.progress_manager)
+        #         tasks[i][video_converter.convert()]
 
-    def convert_files(self):
+
+
+        # 启动转换线程
+        # threading.Thread(target=self.convert_files).start()
+
+
+        asyncio.run(self.convert_files())
+
+    async def convert_files(self):
         """
         根据目标格式转换文件。
 
@@ -126,24 +158,45 @@ class MediaConverterApp:
 
         :return: 无返回值。
         """
+        start_time_total = time.time()
+        print(
+            f"程序开始运行 at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_total))}, 并发限制: {config.CONCURRENCY_LIMIT}")
+
+        tasks = []
+
         if self.target_format.lower() in ['jpg', 'png', 'gif', 'webp']:
             image_converter = ImageConverter(self.input_files, self.output_folder, self.target_format,
                                              self.progress_var, self.progress_label, self.progress_manager)
             image_converter.convert()
         elif self.target_format.lower() in ['mp4', 'avi', 'mov', 'mkv']:
-            video_converter = VideoConverter(self.input_files, self.output_folder, self.target_format,
-                                             self.progress_var, self.progress_label, self.progress_manager)
-            video_converter.convert()
+            tasks = [VideoConverter(self.input_files[i], self.output_folder, self.target_format, self.progress_var,
+                                    self.progress_label, self.progress_manager).convert() for i in
+                     range(len(self.input_files))]
+            # video_converter = VideoConverter(self.input_files, self.output_folder, self.target_format,
+            #                                  self.progress_var, self.progress_label, self.progress_manager)
+            # video_converter.convert()
 
+        await asyncio.gather(*tasks)
+
+        end_time_total = time.time()
+        total_duration = end_time_total - start_time_total
+        print(
+            f"所有文件转换完成 (async with subprocess and pool) at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_total))}, 总耗时: {total_duration:.2f} 秒")
         # 转换完成后恢复按钮
         self.enable_buttons()
 
     def disable_buttons(self):
+        """
+        在文件转换过程中禁用按钮，防止用户进行不必要的操作。
+        """
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Button):
                 widget.config(state=tk.DISABLED)
 
     def enable_buttons(self):
+        """
+        文件转换完成后重新启用按钮。
+        """
         for widget in self.root.winfo_children():
             if isinstance(widget, tk.Button):
                 widget.config(state=tk.NORMAL)
