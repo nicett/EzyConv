@@ -1,15 +1,13 @@
-import asyncio
-import os
-import tkinter as tk
+import sys
 import logging
-from media_converter_app import MediaConverterApp
-
-
-
+from PySide6.QtWidgets import QApplication
+from gui.main_window import SnapConvertApp
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = MediaConverterApp(root)
     # 配置日志记录
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    root.mainloop()
+    
+    app = QApplication(sys.argv)
+    window = SnapConvertApp()
+    window.show()
+    sys.exit(app.exec())

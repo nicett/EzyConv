@@ -4,7 +4,7 @@ import asyncio
 import subprocess
 
 import config
-from converter.base_converter import Converter
+from core.base_converter import Converter
 # 创建信号量
 semaphore = asyncio.Semaphore(config.CONCURRENCY_LIMIT)
 

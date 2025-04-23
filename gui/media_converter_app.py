@@ -4,8 +4,8 @@ import asyncio
 from tkinter import filedialog, messagebox, ttk
 
 import config
-from converter.image_converter import ImageConverter
-from converter.video_converter import VideoConverter
+from core.image_converter import ImageConverter
+from core.video_converter import VideoConverter
 from utils.progress_manager import ProgressManager
 
 

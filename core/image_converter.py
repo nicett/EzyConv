@@ -2,7 +2,7 @@ from PIL import Image
 import os
 import logging
 
-from converter.base_converter import Converter
+from core.base_converter import Converter
 
 
 class ImageConverter(Converter):
