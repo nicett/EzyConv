@@ -49,11 +49,11 @@ async def main():
     start_time_total = time.time()
     print(f"程序开始运行 at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_total))}, 并发限制: {CONCURRENCY_LIMIT}")
     input_files = [
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-1.mp4',
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-2.mp4',
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-3.mp4',
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-4.mp4',
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-5.mp4',
+        r'input-1.mp4',
+        r'input-2.mp4',
+        r'input-3.mp4',
+        r'input-4.mp4',
+        r'input-5.mp4',
         # 可以添加更多文件进行测试
     ]
     output_files = [
@@ -65,8 +65,18 @@ async def main():
         # 对应更多输出文件名
     ]
 
-    tasks = [convert_file_async(input_files[i], output_files[i]) for i in range(len(input_files))]
-    await asyncio.gather(*tasks)
+    # 原代码
+    # tasks = [convert_file_async(input_files[i], output_files[i]) for i in range(len(input_files))]
+
+    # 修改后的代码
+    tasks = []
+    for i in range(len(input_files)):
+        if os.path.isfile(input_files[i]):
+            task = convert_file_async(input_files[i], output_files[i])
+            tasks.append(task)
+
+    if len(tasks) != 0:
+        await asyncio.gather(*tasks)
 
     end_time_total = time.time()
     total_duration = end_time_total - start_time_total
@@ -75,51 +85,3 @@ async def main():
 # 程序入口，运行主函数
 if __name__ == "__main__":
     asyncio.run(main())
-
-
-
-
-# import asyncio
-# import ffmpeg
-# import time
-#
-# async def convert_file_async(input_file, output_file):
-#     start_time = time.time()
-#     print(f"开始转换 (async) at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}: {input_file} -> {output_file}")
-#     try:
-#         process = ffmpeg.input(input_file).output(
-#             output_file,
-#             vcodec='copy',
-#             acodec='copy'
-#         ).run_async()
-#         process.wait()
-#         print(f"转换完成 (async): {input_file} -> {output_file}")
-#     except ffmpeg.Error as e:
-#         print(f"转换 {input_file} 失败 (async): {e.stderr.decode()}")
-#     except Exception as e:
-#         print(f"转换 {input_file} 发生异常 (async): {e}")
-#
-# async def main():
-#     start_time_total = time.time()
-#     print(f"程序开始运行 at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_total))}")
-#
-#     input_files = [
-#         r'C:\Users\zhaoz\Desktop\测试图片\thailand-1.mp4',
-#         r'C:\Users\zhaoz\Desktop\测试图片\thailand-2.mp4',
-#         r'C:\Users\zhaoz\Desktop\测试图片\thailand-3.mp4'
-#     ]
-#     output_files = [
-#         'output1_async_ffmpeg_py.mkv',
-#         'output2_async_ffmpeg_py.mkv',
-#         'output3_async_ffmpeg_py.mkv'
-#     ]
-#
-#     tasks = [convert_file_async(input_files[i], output_files[i]) for i in range(len(input_files))]
-#     await asyncio.gather(*tasks)
-#     end_time_total = time.time()
-#     total_duration = end_time_total - start_time_total
-#     print(
-#         f"所有文件转换完成 (async with ffmpeg-python) at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(end_time_total))}, 总耗时: {total_duration:.2f} 秒")
-#
-# if __name__ == "__main__":
-#     asyncio.run(main())

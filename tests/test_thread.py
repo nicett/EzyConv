@@ -1,7 +1,9 @@
 import subprocess
 import time
 import os
+import os.path
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
 
 # 定义并发限制大小
 CONCURRENCY_LIMIT = os.cpu_count() or 4  # 默认限制为 CPU 核心数或 4
@@ -53,31 +55,36 @@ def main():
         f"程序开始运行 at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time_total))}, 并发限制: {CONCURRENCY_LIMIT}")
 
     input_files = [
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-1.mp4',
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-2.mp4',
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-3.mp4',
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-4.mp4',
-        r'C:\Users\zhaoz\Desktop\测试图片\thailand-5.mp4',
+        r'input-1.mp4',
+        r'input-2.mp4',
+        r'input-3.mp4',
+        r'input-4.mp4',
+        r'input-5.mp4',
         # 可以添加更多文件进行测试
     ]
     output_files = [
-        'output1_threaded.mkv',
-        'output2_threaded.mkv',
-        'output3_threaded.mkv',
-        'output4_threaded.mkv',
-        'output5_threaded.mkv',
+        'output1_pooled.mkv',
+        'output2_pooled.mkv',
+        'output3_pooled.mkv',
+        'output4_pooled.mkv',
+        'output5_pooled.mkv',
         # 对应更多输出文件名
     ]
+
+
 
     # 提交任务到线程池
     futures = []
     for i in range(len(input_files)):
-        future = executor.submit(convert_file, input_files[i], output_files[i])
-        futures.append(future)
+        if os.path.isfile(input_files[i]):
+            future = executor.submit(convert_file, input_files[i], output_files[i])
+            futures.append(future)
 
+
+    if len(futures) != 0:
     # 等待所有任务完成
-    for future in as_completed(futures):
-        pass  # 可以根据需要捕获异常
+        for future in as_completed(futures):
+            pass  # 可以根据需要捕获异常
 
     end_time_total = time.time()
     total_duration = end_time_total - start_time_total
