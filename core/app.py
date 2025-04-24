@@ -43,8 +43,9 @@ def convert_file(input_file, output_folder,combo):
 
     print(f"开始转换 (thread) at {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start_time))}: {input_file} -> {output_file}")
 
+    end_time = time.time()
+    duration = end_time - start_time
 
-    
     if combo not in ['mp4','avi']:
         im = Image.open(input_file)
         im.save(output_file, combo.lower(),save_all=True)
@@ -74,8 +75,6 @@ def convert_file(input_file, output_folder,combo):
     except Exception as e:
         print(f"转换 {input_file} 发生异常 (thread): {e}")
     finally:
-        end_time = time.time()
-        duration = end_time - start_time
         print(f"转换耗时: {duration:.2f} 秒: {input_file} -> {output_file}")
 
 
