@@ -8,6 +8,8 @@ Video processing is based on: **FFmpeg**
 
 Image processing is based on: **Pillow**
 
+[中文说明](README_ZH.md)
+
 ## Features
 - Supports conversion of common image formats (PNG, WEBP, GIF, etc.)
 - Supports conversion of video formats (MP4, AVI, etc.)
