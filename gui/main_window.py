@@ -1,19 +1,19 @@
-import sys
 import os
+import queue
 import subprocess
+import sys
+from time import sleep
 
-
-from core.app import convert
-
-from typing import Dict, Optional
-
+from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
     QFileDialog, QTableWidget, QTableWidgetItem, QComboBox, QMessageBox, QProgressBar,
     QTextEdit, QSizePolicy, QAbstractItemView, QCheckBox, QButtonGroup, QHeaderView
 )
-from PySide6.QtCore import Qt, QTimer
-from backend.media_analyzer import get_media_details
+from PySide6.QtCore import Qt
+from backend.media_analyzer import MediaAnalyzer
+from core.app import App
+
 
 class SnapConvertApp(QWidget):
     """
@@ -21,17 +21,32 @@ class SnapConvertApp(QWidget):
     """
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("SnapConvert")
+        self.setWindowTitle("EzyConv")
         self.setFixedSize(600, 800)
+        # image_path = get_resource_path("assets/your_image.png")
+        icon_path = self._get_resource_path("assets/EzyConv.ico")
+        self.setWindowIcon(QIcon(icon_path))
         self.setup_ui()
         self._check_ffprobe()
+
+    def _get_resource_path(self,relative_path):
+        if hasattr(sys, '_MEIPASS'):
+            return os.path.join(sys._MEIPASS, relative_path)
+        return os.path.join(os.path.abspath("."), relative_path)
+
+
 
     def _check_ffprobe(self):
         """
         检查 ffprobe 是否可用。如果不可用，弹出警告对话框。
         """
+
+        if sys.platform == "win32":
+            creationflags = subprocess.CREATE_NO_WINDOW
+        else:
+            creationflags = 0
         try:
-            subprocess.run(["ffprobe", "-version"], capture_output=True, check=True, text=True, encoding='utf-8')
+            subprocess.run(["ffprobe", "-version"], capture_output=True, check=True, text=True, encoding='utf-8',creationflags=creationflags)
         except (FileNotFoundError, subprocess.CalledProcessError, OSError) as e:
             QMessageBox.warning(
                 self,
@@ -112,6 +127,7 @@ class SnapConvertApp(QWidget):
 
         # 进度条
         self.progress_bar = QProgressBar()
+        self.progress_bar.setMaximum(100)
         self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
 
@@ -210,7 +226,7 @@ class SnapConvertApp(QWidget):
             try:
                 for file_path in files:
                     if file_path not in current_files:
-                        details = get_media_details(file_path)
+                        details = MediaAnalyzer.get_media_details(file_path)
 
                         if details.get("error"):
                             QMessageBox.warning(self, "文件信息获取失败", f"无法获取文件 '{details['name']}' 的详细信息。\n原因: {details['error']}")
@@ -264,6 +280,11 @@ class SnapConvertApp(QWidget):
         if self.file_table.rowCount() == 0:
             QMessageBox.warning(self, "未选择文件", "请先选择要转换的文件。")
             return
+
+        if self.output_folder_path is None:
+            QMessageBox.warning(self, "未选择输出文件夹", "请先选择输出文件夹。")
+            return
+
         reply = QMessageBox.question(
             self, "确认转换", f"确定要将 {self.file_table.rowCount()} 个文件转换为 {self.type_combo.currentText()} 格式吗？",
             QMessageBox.Yes | QMessageBox.No
@@ -279,51 +300,42 @@ class SnapConvertApp(QWidget):
         self.progress_bar.setValue(0)
         self.detail_text.clear()
         self.append_detail("开始转换...")
+
         self.files_to_convert = []
 
-        #
         for row in range(self.file_table.rowCount()):
             item = self.file_table.item(row, 0)
             if item:
                 full_path = item.data(Qt.UserRole)
                 if full_path:
-                    print(full_path)
                     self.files_to_convert.append(full_path)
 
         self.append_detail(f"目标格式: {self.type_combo.currentText()}")
         self.append_detail(f"文件数量: {len(self.files_to_convert)}")
 
-        convert(self.files_to_convert,self.output_folder_path,self.type_combo.currentText())
 
-        # for i, f_path in enumerate(self.files_to_convert):
-        #     self.append_detail(f"  {i+1}. {os.path.basename(f_path)}")
-        #
-        # self.timer = QTimer(self)
-        # self.timer.timeout.connect(self.update_progress)
-        # self.step = 0
-        # interval = max(100, 500 // max(1, len(self.files_to_convert)))
-        # self.timer.start(interval)
+        progress_queue = queue.Queue()
+        App(self.output_folder_path, self.type_combo.currentText(),self.selected_file_type,progress_queue).convert(self.files_to_convert)
 
-    def update_progress(self):
-        """
-        更新转换进度条，并在完成时显示提示信息。
-        """
-        total_steps = 10 * len(self.files_to_convert) if self.files_to_convert else 10
-        progress_per_step = 100 / total_steps if total_steps > 0 else 0
-        if self.step >= total_steps:
-            self.timer.stop()
-            self.progress_bar.setValue(100)
-            self.append_detail("转换完成。")
-            QMessageBox.information(self, "完成", "文件已成功转换！")
-        else:
-            self.step += 1
-            current_progress = int(self.step * progress_per_step)
-            self.progress_bar.setValue(current_progress)
-            file_index = (self.step - 1) // 10
-            if file_index < len(self.files_to_convert):
-                if (self.step - 1) % 10 == 0:
-                    self.append_detail(f"正在处理: {os.path.basename(self.files_to_convert[file_index])}...")
-                QApplication.processEvents()
+        step = 0
+        count = len(self.files_to_convert)
+        while not progress_queue.empty():
+            task_msg = progress_queue.get()
+            step += 1
+            self.update_progress(step,count,task_msg)
+            sleep(0.5)
+
+
+    def update_progress(self,step:int,count:int,msg:str):
+
+        progress = int((step / count) * 100)  # 使用 int() 截取小数部分
+        self.progress_bar.setValue(progress)
+        self.append_detail(f"{msg}")
+        if step >= count:
+            QMessageBox.information(self, "完成", "转换完成！")
+        QApplication.processEvents()
+
+
 
     def toggle_details(self, checked):
         """
