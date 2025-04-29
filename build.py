@@ -22,14 +22,18 @@ def find_path(env,exe):
 
 
 def run_command(command):
-    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,universal_newlines=True, bufsize=1)
-    if process.stdout:
-        for line in process.stdout:
-            print(line.strip())
 
-    if process.stderr:
-        for line in process.stderr:
-            print(line.strip(), file=sys.stderr)
+    process = subprocess.Popen(
+        command,
+        stdout=subprocess.PIPE,
+        text=True
+    )
+    while True:
+        line = process.stdout.readline()
+        if not line and process.poll() is not None:
+            break
+        if line:
+            print(line.strip())
 
     code = process.wait()
     return code
